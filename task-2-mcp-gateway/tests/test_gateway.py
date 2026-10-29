@@ -232,6 +232,27 @@ async def test_downstream_response_bytes_and_http_status_are_preserved():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("status", [200, 400])
+@pytest.mark.parametrize("request_id", [0, "internal-error-1"])
+async def test_upstream_internal_errors_drop_all_private_details(status, request_id):
+    def respond(request):
+        return httpx.Response(status, json={
+            "jsonrpc": "2.0", "id": request_id,
+            "error": {"code": -32603, "message": "private-backend-name",
+                      "data": {"stack": "private-stack-details"}},
+            "private_metadata": "private-path",
+        })
+    async with gateway_client(respond) as client:
+        response = await client.post("/mcp", json=rpc(request_id=request_id), headers=auth())
+    assert response.status_code == status
+    assert response.json() == {
+        "jsonrpc": "2.0", "id": request_id,
+        "error": {"code": -32603, "message": "Internal error"},
+    }
+    assert "private" not in response.text
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("failure,status,code", [
     (httpx.ConnectError("private-host"), 502, -32003),
     (httpx.ReadTimeout("private-host"), 504, -32002),

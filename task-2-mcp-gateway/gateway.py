@@ -144,6 +144,9 @@ def create_app(settings: Settings | None = None,
             reply = None
         if not valid_reply(reply, request_id):
             return error_response(-32003, "Invalid downstream response", request_id, status=502)
+        if "error" in reply and reply["error"]["code"] == -32603:
+            # Internal errors may carry private messages, stack traces, or metadata.
+            return error_response(-32603, "Internal error", request_id, status=upstream.status_code)
         return Response(content=upstream.content, status_code=upstream.status_code,
                         media_type="application/json")
 
