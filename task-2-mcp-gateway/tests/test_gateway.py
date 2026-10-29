@@ -14,6 +14,7 @@ import pytest_asyncio
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gateway import Settings, create_app
 from mock_server import app as mock_app
+from starlette.requests import ClientDisconnect
 
 
 ADMIN = "test-only-admin-token"
@@ -33,11 +34,12 @@ def auth(token=VIEWER):
 
 
 @asynccontextmanager
-async def gateway_client(handler, settings=SETTINGS):
+async def gateway_client(handler, settings=SETTINGS, raise_app_exceptions=True):
     app = create_app(settings, httpx.MockTransport(handler))
     # HTTPX's ASGI transport does not run application startup/shutdown itself.
     async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://gateway") as client:
+        transport = httpx.ASGITransport(app, raise_app_exceptions=raise_app_exceptions)
+        async with httpx.AsyncClient(transport=transport, base_url="http://gateway") as client:
             yield client
 
 
@@ -250,6 +252,59 @@ async def test_upstream_internal_errors_drop_all_private_details(status, request
         "error": {"code": -32603, "message": "Internal error"},
     }
     assert "private" not in response.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("request_id", [0, "unexpected-error-1"])
+async def test_unexpected_errors_return_safe_jsonrpc_frames(request_id):
+    def fail(request):
+        raise RuntimeError("private-error-details")
+    # Production sends the handler's response; ASGITransport normally re-raises.
+    async with gateway_client(fail, raise_app_exceptions=False) as client:
+        response = await client.post("/mcp", json=rpc(request_id=request_id), headers=auth())
+    assert response.status_code == 500
+    assert response.headers["content-type"] == "application/json"
+    assert response.json() == {
+        "jsonrpc": "2.0", "id": request_id,
+        "error": {"code": -32603, "message": "Internal error"},
+    }
+    assert "private" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_unexpected_response_processing_errors_are_also_handled(monkeypatch):
+    def broken_validator(*args):
+        raise RuntimeError("private-validator-details")
+    monkeypatch.setattr("gateway.valid_reply", broken_validator)
+    def respond(request):
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 7, "result": {}})
+    async with gateway_client(respond, raise_app_exceptions=False) as client:
+        response = await client.post("/mcp", json=rpc(), headers=auth())
+    assert response.status_code == 500
+    assert response.json()["id"] == 7
+    assert response.json()["error"] == {"code": -32603, "message": "Internal error"}
+    assert "private" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_notification_failure_has_no_jsonrpc_body():
+    def fail(request):
+        raise RuntimeError("private-notification-error")
+    async with gateway_client(fail, raise_app_exceptions=False) as client:
+        response = await client.post("/mcp", headers=auth(),
+                                     json={"jsonrpc": "2.0", "method": "notifications/initialized"})
+    assert response.status_code == 500
+    assert response.content == b""
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [asyncio.CancelledError(), ClientDisconnect()])
+async def test_cancellation_and_disconnect_are_not_converted_to_internal_errors(failure):
+    async def fail(request):
+        raise failure
+    async with gateway_client(fail) as client:
+        with pytest.raises(type(failure)):
+            await client.post("/mcp", json=rpc(), headers=auth())
 
 
 @pytest.mark.asyncio

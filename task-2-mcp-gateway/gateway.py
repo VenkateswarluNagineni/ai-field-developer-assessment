@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from starlette.requests import ClientDisconnect
 
 from protocol import RpcError, error_response, load_json, parse_request
 
@@ -94,6 +95,16 @@ def create_app(settings: Settings | None = None,
 
     app = FastAPI(title="MCP security gateway", lifespan=lifespan)
 
+    @app.exception_handler(Exception)
+    async def unexpected_error(request: Request, exc: Exception):
+        if isinstance(exc, ClientDisconnect):
+            raise exc
+        logger.error("Unexpected gateway error")
+        if getattr(request.state, "is_notification", False):
+            return Response(status_code=500)
+        return error_response(-32603, "Internal error",
+                              getattr(request.state, "rpc_id", None), status=500)
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}
@@ -112,6 +123,9 @@ def create_app(settings: Settings | None = None,
             return error_response(exc.code, exc.message, exc.request_id, status=400)
 
         request_id = frame.get("id")
+        # Store only validated routing metadata for the unexpected-error handler.
+        request.state.rpc_id = request_id
+        request.state.is_notification = "id" not in frame
         if frame["method"] == "tools/call":
             name = frame["params"]["name"]
             if name.startswith("admin_") and role != "admin":

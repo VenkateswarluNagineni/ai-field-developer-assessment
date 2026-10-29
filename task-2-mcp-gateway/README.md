@@ -126,18 +126,28 @@ These are opaque demo tokens, not JWTs. There is no login service in this task. 
 | Viewer calls an `admin_` tool | `200` | JSON-RPC `-32001` |
 | Downstream timeout | `504` | JSON-RPC `-32002` |
 | Connection failure, redirect, server failure, or invalid response | `502` | JSON-RPC `-32003` |
+| Unexpected gateway error | `500` | JSON-RPC `-32603` with a safe message |
 
 HTTP `200` on a blocked tool call means the JSON-RPC exchange succeeded. Its `error` field means the tool call was denied.
 
 Authentication runs before body parsing, so authentication failures use an HTTP error rather than an untrusted request ID. Authenticated JSON-RPC requests keep their IDs in gateway errors.
 
-Allowed requests keep their original body bytes, including extra metadata. Valid downstream responses keep their body bytes and HTTP status, including JSON-RPC errors. Redirects are not followed. HTTP 5xx bodies are replaced with a safe error. A mismatched response ID is rejected. Failed requests are not retried, since a tool may already have acted.
+Allowed requests keep their original body bytes, including extra metadata. Valid successful replies and ordinary client-error replies keep their body bytes and HTTP status. Downstream internal errors (`-32603`) keep their ID, code, and HTTP status, but their message is replaced with `Internal error` and private details are removed. Unexpected gateway exceptions return HTTP `500` with the same safe JSON-RPC error. Redirects are not followed. HTTP 5xx bodies are replaced with a safe error. A mismatched response ID is rejected. Failed requests are not retried, since a tool may already have acted.
 
 Valid `notifications/` messages are forwarded and return HTTP `204` without a JSON-RPC reply. Tool calls require an ID. Other request methods pass through for the downstream server to handle.
 
 ## Scope
 
-This is the assessment's HTTP/JSON-RPC proxy and mock. It does not implement Streamable HTTP sessions, SSE, OAuth, prompt detection, refund amount caps, PII masking, or rate limits. Task 1 remains a separate stdio server. The `admin_` prefix rule is case-sensitive and does not restrict `trigger_refund`.
+Task 2's rule is simple: a tool name starting with `admin_` requires an admin token. The prefix is case-sensitive. It does not restrict `trigger_refund`.
+
+These extra protections are outside this task:
+
+- Checking prompts for attacks.
+- Limiting refund amounts.
+- Hiding personal information in tool output.
+- Limiting how often someone can call a tool.
+
+This task uses a sample HTTP/JSON-RPC server and demo tokens. Full MCP Streamable HTTP sessions, SSE, and OAuth are not included. Task 1 remains a separate stdio server.
 
 ## Tests
 
@@ -145,6 +155,6 @@ This is the assessment's HTTP/JSON-RPC proxy and mock. It does not implement Str
 uv run --locked pytest -q
 ```
 
-All 66 tests passed locally. They check both roles, unknown tokens, malformed requests, duplicate fields, escaped tool names, false admin claims, downstream failures, timeouts, cancellation, response IDs, parallel requests, and real HTTP forwarding. Blocked calls are checked against a recording downstream transport, not just their error messages. See [test results](TEST_RESULTS.md).
+All 76 tests passed locally. They check both roles, unknown tokens, malformed requests, duplicate fields, escaped tool names, false admin claims, downstream failures, private error details, unexpected gateway errors, timeouts, cancellation, response IDs, parallel requests, and real HTTP forwarding. Blocked calls are checked against a recording downstream transport, not just their error messages. See [test results](TEST_RESULTS.md).
 
 GitHub also runs both task suites on Windows and Linux with Python 3.11 and 3.14. Dependencies are fixed by `uv.lock`.
