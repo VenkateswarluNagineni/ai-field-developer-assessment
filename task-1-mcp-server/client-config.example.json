@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "customer-mcp": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/ai-field-developer-assessment/task-1-mcp-server",
+        "run",
+        "--locked",
+        "server.py"
+      ]
+    }
+  }
+}
