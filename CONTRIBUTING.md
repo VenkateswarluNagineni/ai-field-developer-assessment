@@ -30,4 +30,11 @@ cd task-1-mcp-server
 uv run --locked pytest -q
 ```
 
-GitHub runs these tests on Windows and Linux with Python 3.11 and 3.14. Do not mark a future task as complete until its code and tests exist.
+For Task 3:
+
+```sh
+cd task-3-streaming-guardrail
+uv run --locked pytest -q
+```
+
+GitHub runs the implemented task suites on Windows and Linux with Python 3.11 and 3.14. Do not mark a future task as complete until its code and tests exist.
