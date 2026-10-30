@@ -77,6 +77,22 @@ async def test_redaction_end_to_end_and_safe_final_flush():
 
 
 @pytest.mark.asyncio
+async def test_invisible_separators_are_redacted_through_the_gateway():
+    email = "\u200b".join("alex@example.com")
+    ssn = "\u202e".join("123-45-6789")
+    card = "\u2060".join("4111 1111 1111 1111")
+    text = f"Contact {email}; SSN {ssn}; card {card}."
+    stream = ProviderStream([delta(char) for char in text] + [DONE])
+    async with gateway_client(stream) as (client, calls):
+        response = await client.post("/generate", json={"prompt": "demo"})
+    events = decode(response.content)
+    result = "".join(data["text"] for name, data in events if name == "delta")
+    assert result == "Contact [REDACTED]; SSN [REDACTED]; card [REDACTED]."
+    assert events[-1][0] == "done"
+    assert stream.closed
+
+
+@pytest.mark.asyncio
 async def test_headers_are_not_forwarded_from_the_client():
     stream = ProviderStream([delta("Safe!"), DONE])
     async with gateway_client(stream) as (client, calls):

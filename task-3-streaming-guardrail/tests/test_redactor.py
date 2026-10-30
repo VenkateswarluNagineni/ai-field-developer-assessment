@@ -108,3 +108,46 @@ def test_each_stream_has_its_own_state():
     assert second.feed("Hello! ") == "Hello! "
     assert second.finish() == ""
     assert first.feed("example.com; ") == "[REDACTED]; "
+
+
+@pytest.mark.parametrize("codepoint", [0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x202E, 0x2066, 0x00AD, 0x061C])
+@pytest.mark.parametrize("plain", ["4111 1111 1111 1111", "123-45-6789", "alex@example.com"])
+def test_format_controls_cannot_split_sensitive_candidates(codepoint, plain):
+    text = chr(codepoint).join(plain)
+    for split in range(len(text) + 1):
+        redactor = Redactor()
+        first = redactor.feed(text[:split])
+        second = redactor.feed(text[split:])
+        assert first == second == "", "A sensitive prefix escaped before completion"
+        assert redactor.finish() == "[REDACTED]"
+    redactor = Redactor()
+    for char in text:
+        assert redactor.feed(char) == ""
+    assert redactor.finish() == "[REDACTED]"
+
+
+def test_normal_formatting_and_joined_emoji_are_preserved():
+    text = "Hello! \u200bworld; \U0001f469\u200d\U0001f4bb; \u0633\u0644\u0627\u0645\u200c\u062f\u0646\u06cc\u0627;"
+    for split in range(len(text) + 1):
+        redactor = Redactor()
+        result = redactor.feed(text[:split]) + redactor.feed(text[split:]) + redactor.finish()
+        assert result == text
+
+
+def test_format_controls_still_count_toward_the_buffer_limit():
+    redactor = Redactor()
+    assert redactor.feed("a" + "\u200b" * (MAX_PENDING - 1)) == ""
+    assert len(redactor.pending) == MAX_PENDING
+    with pytest.raises(BufferLimitError):
+        redactor.feed("\u200b")
+    assert len(redactor.pending) <= MAX_PENDING
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("count=1234567890123", "count=[REDACTED]"),
+    ("request_id=abc1234567890123xyz", "request_id=abc[REDACTED]xyz"),
+    ("A@B", "[REDACTED]"),
+])
+def test_conservative_masking_policy_is_unchanged(text, expected):
+    redactor = Redactor()
+    assert redactor.feed(text) + redactor.finish() == expected

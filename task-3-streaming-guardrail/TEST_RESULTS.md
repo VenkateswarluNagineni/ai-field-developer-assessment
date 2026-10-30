@@ -1,6 +1,6 @@
 # Task 3 test results
 
-Date: October 29, 2026.
+Date: October 30, 2026.
 
 Local environment: Windows, Python 3.14.0, FastAPI 0.162.0, HTTPX 0.28.1, Uvicorn 0.54.0.
 
@@ -13,7 +13,7 @@ uv run --locked pytest -q
 Result:
 
 ```text
-104 passed in 6.07s
+137 passed in 12.31s
 ```
 
 The tests cover:
@@ -21,6 +21,9 @@ The tests cover:
 - Every two-chunk split of sample emails, formatted SSNs, and card-like numbers.
 - One-character deltas, random chunking, punctuation boundaries, and multiple sensitive values.
 - Unquoted ASCII email characters, including apostrophes.
+- Invisible separators, joiners, and directional controls inside emails, SSNs, and card-like numbers, at every two-chunk split and one character at a time.
+- Non-sensitive formatting and joined emoji remain unchanged. Invisible controls still count toward the buffer limit.
+- Existing conservative masking of long counts, IDs, and `A@B` remains unchanged.
 - No early release of sensitive prefixes and safe flushing only on normal completion.
 - Long output without accumulating the answer; unfinished candidates remain bounded.
 - SSE events split at every byte, including inside multibyte UTF-8 characters.
