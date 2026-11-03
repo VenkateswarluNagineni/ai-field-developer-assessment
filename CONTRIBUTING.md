@@ -37,6 +37,13 @@ cd task-2-mcp-gateway
 uv run --locked pytest -q
 ```
 
+For Task 3:
+
+```sh
+cd task-3-streaming-guardrail
+uv run --locked pytest -q
+```
+
 For Task 4:
 
 ```sh
