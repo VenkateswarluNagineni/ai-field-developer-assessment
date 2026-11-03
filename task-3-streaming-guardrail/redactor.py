@@ -11,7 +11,7 @@ WORD = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~@-]+")
 WORD_TAIL = re.compile(WORD.pattern + "$")
 NUMBER = re.compile(r"[0-9][0-9 -]*")
 NUMBER_TAIL = re.compile(r"[0-9][0-9 -]*$")
-SSN = re.compile(r"(?<![0-9])[0-9]{3}-[0-9]{2}-[0-9]{4}(?![0-9])")
+SSN = re.compile(r"(?<![0-9])[0-9]{3}[- ][0-9]{2}[- ][0-9]{4}(?![0-9])")
 
 
 class BufferLimitError(ValueError):
@@ -26,7 +26,12 @@ def scan_view(text: str) -> tuple[str, list[int]]:
 
 def redact_complete(text: str) -> str:
     visible, positions = scan_view(text)
-    spans = [(match.start(), match.end()) for match in WORD.finditer(visible) if "@" in match[0]]
+    spans = []
+    for match in WORD.finditer(visible):
+        if "@" in match[0]:
+            # Keep sentence punctuation outside the masked span.
+            end = match.start() + len(match[0].rstrip(".!?"))
+            spans.append((match.start(), end))
     for match in NUMBER.finditer(visible):
         value = match[0]
         digits = sum("0" <= char <= "9" for char in value)

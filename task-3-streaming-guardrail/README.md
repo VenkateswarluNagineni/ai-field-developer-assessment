@@ -68,13 +68,13 @@ Hello! Email [REDACTED]; SSN [REDACTED]; card [REDACTED]. Done!
 
 | Pattern | Behavior |
 | --- | --- |
-| Common unquoted ASCII email-like text | Mask the whole token containing `@`, including incomplete `alex@`. Supports apostrophes, plus signs, and other unquoted ASCII email characters. |
-| Formatted SSN | Mask `123-45-6789`. |
+| Common unquoted ASCII email-like text | Mask the whole token containing `@`, including incomplete `alex@`. Supports apostrophes, plus signs, and other unquoted ASCII email characters. Preserves trailing periods, exclamation marks, and question marks. |
+| Formatted SSN | Mask `123-45-6789` and `123 45 6789`. |
 | Card-like number | Mask numeric runs with 13 or more digits, including spaces and hyphens. This covers 13–19 digit card formats and conservatively masks longer runs too. |
 
 **Rule: invisible formatting characters must not split a sensitive value into apparently safe pieces.** The checker ignores Unicode format controls (category `Cf`) for matching and keeps the unfinished original text buffered. A detected value is masked together with controls inside it. Non-sensitive formatting, including joined emoji, stays unchanged. These controls still count toward the 512-character buffer limit. This handles format controls, not every possible Unicode disguise.
 
-This is a privacy filter, not a card validator. It does not require a Luhn checksum. It may mask long order numbers, social handles, nearby email punctuation, or several adjacent numeric values as one candidate. That is intentional. It does not cover every PII type, quoted or international email addresses, address-literal domains, Unicode digits, or disguised text such as `alex at example dot com`.
+This is a privacy filter, not a card validator. It does not require a Luhn checksum. It may mask long order numbers, social handles, or several adjacent numeric values as one candidate. That is intentional. It does not cover every PII type, quoted or international email addresses, address-literal domains, Unicode digits, or disguised text such as `alex at example dot com`.
 
 ## Limits and latency
 
@@ -133,6 +133,6 @@ Other stream error codes are `buffer_limit`, `provider_timeout`, and `internal_e
 uv run --locked pytest -q
 ```
 
-All 137 local tests passed. Tests split examples at every two-chunk position, try one-character and random chunking, check invisible formatting controls and UTF-8/SSE framing, bound buffers, run parallel streams, and verify cleanup and backpressure. A real HTTP test checks that safe text reaches the client before the provider finishes. See [test results](TEST_RESULTS.md).
+All 154 local tests passed. Tests split examples at every two-chunk position, try one-character and random chunking, check invisible formatting controls and UTF-8/SSE framing, bound buffers, run parallel streams, and verify cleanup and backpressure. A real HTTP test checks that safe text reaches the client before the provider finishes. See [test results](TEST_RESULTS.md).
 
 Task 3 covers generated-text redaction only. Prompt classification, authentication, rate limiting, model fallback, tool authorization, and MCP tool-output masking are outside this task. No production-scale concurrency or latency claim is made.

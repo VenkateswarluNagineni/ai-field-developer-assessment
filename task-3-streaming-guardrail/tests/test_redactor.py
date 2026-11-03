@@ -13,7 +13,11 @@ EXAMPLES = [
     ("alex+support@example.co.uk", "[REDACTED]"),
     ("o'hara@example.com", "[REDACTED]"),
     ("first!#$%&'*+-/=?^_`{|}~last@example.com", "[REDACTED]"),
-    ("contact alex@example.com! ", "contact [REDACTED] "),
+    ("contact alex@example.com! ", "contact [REDACTED]! "),
+    ("Email support@example.com.", "Email [REDACTED]."),
+    ("Email support@example.com?!", "Email [REDACTED]?!"),
+    ("SSN: 123 45 6789.", "SSN: [REDACTED]."),
+    ("SSN: 123 45-6789", "SSN: [REDACTED]"),
     ("SSN: 123-45-6789", "SSN: [REDACTED]"),
     ("Card: 4111111111111111", "Card: [REDACTED]"),
     ("Card: 4111 1111 1111 1111.", "Card: [REDACTED]."),
@@ -111,7 +115,7 @@ def test_each_stream_has_its_own_state():
 
 
 @pytest.mark.parametrize("codepoint", [0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x202E, 0x2066, 0x00AD, 0x061C])
-@pytest.mark.parametrize("plain", ["4111 1111 1111 1111", "123-45-6789", "alex@example.com"])
+@pytest.mark.parametrize("plain", ["4111 1111 1111 1111", "123-45-6789", "123 45 6789", "alex@example.com"])
 def test_format_controls_cannot_split_sensitive_candidates(codepoint, plain):
     text = chr(codepoint).join(plain)
     for split in range(len(text) + 1):
