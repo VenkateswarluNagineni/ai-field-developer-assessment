@@ -5,6 +5,7 @@ import hmac
 import logging
 import math
 import os
+import unicodedata
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -127,7 +128,7 @@ def create_app(settings: Settings | None = None,
         request.state.rpc_id = request_id
         request.state.is_notification = "id" not in frame
         if frame["method"] == "tools/call":
-            name = frame["params"]["name"]
+            name = unicodedata.normalize("NFKC", frame["params"]["name"])
             if name.startswith("admin_") and role != "admin":
                 logger.warning("Blocked admin tool call for viewer")
                 return error_response(-32001, "Unauthorized Tool Call", request_id)

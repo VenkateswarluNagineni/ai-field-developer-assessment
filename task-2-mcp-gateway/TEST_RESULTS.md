@@ -13,7 +13,7 @@ uv run --locked pytest -q
 Final local result:
 
 ```text
-76 passed in 4.38s
+77 passed in 8.00s
 ```
 
 The tests check:

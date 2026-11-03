@@ -138,7 +138,7 @@ Valid `notifications/` messages are forwarded and return HTTP `204` without a JS
 
 ## Scope
 
-Task 2's rule is simple: a tool name starting with `admin_` requires an admin token. The prefix is case-sensitive. It does not restrict `trigger_refund`.
+Task 2's rule is simple: a tool name starting with `admin_` requires an admin token. The gateway checks the case-sensitive prefix after Unicode NFKC normalization and forwards the original tool name. It does not restrict `trigger_refund`.
 
 These extra protections are outside this task:
 
@@ -155,6 +155,6 @@ This task uses a sample HTTP/JSON-RPC server and demo tokens. Full MCP Streamabl
 uv run --locked pytest -q
 ```
 
-All 76 tests passed locally. They check both roles, unknown tokens, malformed requests, duplicate fields, escaped tool names, false admin claims, downstream failures, private error details, unexpected gateway errors, timeouts, cancellation, response IDs, parallel requests, and real HTTP forwarding. Blocked calls are checked against a recording downstream transport, not just their error messages. See [test results](TEST_RESULTS.md).
+All 77 tests passed locally. They check both roles, unknown tokens, malformed requests, duplicate fields, escaped tool names, false admin claims, downstream failures, private error details, unexpected gateway errors, timeouts, cancellation, response IDs, parallel requests, and real HTTP forwarding. Blocked calls are checked against a recording downstream transport, not just their error messages. See [test results](TEST_RESULTS.md).
 
 GitHub also runs both task suites on Windows and Linux with Python 3.11 and 3.14. Dependencies are fixed by `uv.lock`.

@@ -157,6 +157,21 @@ async def test_bad_requests_never_forward(system, body, code):
 
 
 @pytest.mark.asyncio
+async def test_unicode_admin_alias_is_blocked_before_forwarding(system):
+    client, calls = system
+    name = "\uff41\uff44\uff4d\uff49\uff4e\uff3freset_key"
+    frame = rpc("tools/call", {"name": name}, "unicode-name")
+    denied = await client.post("/mcp", json=frame, headers=auth(VIEWER))
+    assert denied.json() == {
+        "jsonrpc": "2.0", "id": "unicode-name",
+        "error": {"code": -32001, "message": "Unauthorized Tool Call"},
+    }
+    assert calls == []
+    await client.post("/mcp", json=frame, headers=auth(ADMIN))
+    assert json.loads(calls[0].content)["params"]["name"] == name
+
+
+@pytest.mark.asyncio
 async def test_escaped_admin_name_is_still_blocked(system):
     client, calls = system
     response = await client.post("/mcp", headers=auth(), content=(
