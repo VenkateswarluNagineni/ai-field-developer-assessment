@@ -5,7 +5,7 @@ Four Python tasks about MCP servers and AI gateways. Each task has its own code,
 | Task | What it does | Status |
 | --- | --- | --- |
 | [1. MCP server](task-1-mcp-server/) | Checks customer and refund inputs. Uses stdio to talk to an MCP client. | Implemented; 44 tests passed locally |
-| [2. MCP security gateway](task-2-mcp-gateway/) | Checks the user's role before allowing admin tools. | Pending |
+| [2. MCP security gateway](task-2-mcp-gateway/) | Checks the user's role before allowing admin tools. | Implemented; 77 tests passed locally |
 | [3. Streaming guardrail](task-3-streaming-guardrail/) | Removes personal information while the response streams. | Implemented; 154 tests passed locally |
 | [4. Model router](task-4-model-router/) | Limits token use and switches providers when needed. Uses SQLite. | Implemented; 67 tests passed locally |
 

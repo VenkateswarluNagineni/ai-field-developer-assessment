@@ -30,6 +30,13 @@ cd task-1-mcp-server
 uv run --locked pytest -q
 ```
 
+For Task 2:
+
+```sh
+cd task-2-mcp-gateway
+uv run --locked pytest -q
+```
+
 For Task 3:
 
 ```sh

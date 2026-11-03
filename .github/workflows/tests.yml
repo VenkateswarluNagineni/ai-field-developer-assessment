@@ -2,24 +2,26 @@ name: Tests
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  task-1:
-    name: Task 1 / ${{ matrix.os }} / Python ${{ matrix.python }}
+  python-tests:
+    name: ${{ matrix.task }} / ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
+        task: [task-1-mcp-server, task-2-mcp-gateway]
         os: [ubuntu-latest, windows-latest]
         python: ['3.11', '3.14']
     defaults:
       run:
-        working-directory: task-1-mcp-server
+        working-directory: ${{ matrix.task }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
